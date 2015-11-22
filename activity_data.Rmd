@@ -1,0 +1,101 @@
+---
+title: "Predicting weight lifting quality"
+author: "Kristof Van Belleghem"
+date: "Saturday, June 20, 2015"
+output: html_document
+---
+# Executive Summary
+
+We build a machine learning algorithm for predicting the way in which a number of test subjects performed a weight lifting exercise (data and more information on http://groupware.les.inf.puc-rio.br/har, weight lifting section). 
+After removing variables with too many missing values and trying out various models, preprocessing techniques and training/crossvalidation parameters, we have chosen a 
+random forest model which claimed over 99% out of sample accuracy based on cross-validation, by far the highest accuracy any of the models claimed. 
+
+# Initial exploration and cleaning
+
+```{r echo=FALSE, include=FALSE}
+library(knitr)
+library(ggplot2)
+library(caret)
+library(rpart)
+library(randomForest)
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+```
+
+After reading in the training data, we see that it contains 160 variables. This could be a bit too much for the algorithms we want to try, so we inspect the data first. It turns out that as many as 100 variables have over 95% missing values. Given such a large percentage of missing values, we'll waste no time on imputing anything and we decide to drop these variables from the start.
+
+In addition, we drop the first 7 variables, which look more like bookkeeping/administration data than like actual measurements. This also includes the username: we prefer to leave that one out as including it would be close to cheating (if the given user_names also exist in the test set) or useless (if not). 
+
+The same filters are obviously applied to the testing set.
+
+```{r}
+training_data <- read.csv("pml-training.csv", stringsAsFactors=FALSE)
+training_data$classe <- as.factor(training_data$classe)
+training_data$user_name <- as.factor(training_data$user_name)
+
+testing_data <- read.csv("pml-testing.csv", stringsAsFactors=FALSE)
+testing_data$user_name <- as.factor(testing_data$user_name)
+
+trainnalist <- sapply(training_data,function(x)(sum(!is.na(x) & x != "")<500))
+oklist <- !trainnalist
+
+clean_training_data <- training_data[,oklist]
+clean_testing_data <- testing_data[,oklist]
+
+#also remove bookkeeping variables and names
+clean_training_data <- clean_training_data[,c(8:60)]
+clean_testing_data <- clean_testing_data[,c(8:60)]
+```
+
+# Building and validating models 
+
+Based on this cleaned-up data set, we'll try to build a good predictive model. Theoretically, random forests would be one of the methods with highest expected accuracy. We'll try a couple of forest sizes and estimate the expected accuracy using cross-validation. We also check if preprocessing (principal components analysis) makes a difference. Finally, we try an entirely different approach (nearest neighbours) and estimate the accuracy of that. 
+
+In order to estimate the out of sample error rate for all models, we use the built-in cross-validation functionality in the caret package (we choose 10-fold cross validation): 
+```{r}
+myTrainControl <- trainControl(repeats=1, number=10, method="cv")
+```
+
+The first model is a random forest with 50 trees, built without any preprocessing.
+
+```{r baseforest, cache=TRUE, warning=FALSE}
+set.seed(314)
+baseforestfit <- train(classe ~. , method="rf", ntree=50, data=clean_training_data, trControl = myTrainControl)
+
+baseforestfit
+```
+The predicted out of sample accuracy of over 99% already looks quite promising, so this is a very decent candidate model.
+
+However, let's see if we can get an even better - and maybe faster - answer if we first apply principal components analysis. Maybe not that relevant for a random forest model, but it could reduce the search space.
+```{r pcaforest, cache=TRUE, warning=FALSE}
+pcaforestfit <- train(classe ~. , method="rf", ntree=50, preProcess="pca", data=clean_training_data, trControl = myTrainControl)
+
+pcaforestfit
+```
+A bit surprisingly, the claimed accuracy is lower with pca preprocessing. So we'll abandon this model. 
+
+In order to try something completely different, we also apply a nearest neighbour model. Again we estimate the out of sample error rate using 10-fold cross validation (). 
+```{r neighbours, cache=TRUE, warning=FALSE}
+neighbourfit <- train(classe ~. , method="knn", data=clean_training_data, trControl = myTrainControl)
+
+neighbourfit
+```
+The out of sample accuracy of this model is also estimated lower than that of the original random forest, although higher than the random forest model with principal components analysis. 
+
+# Choosing the final model
+Amongst the above models and various others we tried, the "simple" random forest model with 50 trees has the highest predicted out of sample accuracy, about 99.5%. Therefore this is the model we select as our model of choice. Principal component analysis preprocessing actually reduced accuracy, and a nearest neighbour model could not reach the same accuracy either.
+
+# Prediction on the test data
+The selected model predicts the following classes for the test data outcomes. 
+```{r}
+predict(baseforestfit,clean_testing_data)
+```
+
+# Epilogue
+Apparently after submitting our predictions, the selected random forest model with 50 trees predicted 100% correct on the 20 test cases. The preprocessed random forest model and the nearest neighbour model made the same predictions on 19 out of 20 cases. Only one case was predicted differently. The model with the highest predicted out of sample accuracy was correct on that one.  
