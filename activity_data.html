@@ -121,7 +121,7 @@ baseforestfit</code></pre>
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
 ## The final value used for the model was mtry = 27.</code></pre>
-<p>The predicted out of sample accuracy of over 99% already looks quite promising, so this is a very decent candidate model.</p>
+<p>The predicted out of sample accuracy of over 99% already looks quite promising, so this is a very decent candidate model. Given that the estimated accuracy was used to select the mtry parameter (mtry with highest accuracy was chosen), bear in mind that the actual out of sample accuracy will be just slightly lower.</p>
 <p>However, let’s see if we can get an even better - and maybe faster - answer if we first apply principal components analysis. Maybe not that relevant for a random forest model, but it could reduce the search space.</p>
 <pre class="r"><code>pcaforestfit &lt;- train(classe ~. , method=&quot;rf&quot;, ntree=50, preProcess=&quot;pca&quot;, data=clean_training_data, trControl = myTrainControl)
 
@@ -144,7 +144,7 @@ pcaforestfit</code></pre>
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
 ## The final value used for the model was mtry = 2.</code></pre>
-<p>A bit surprisingly, the claimed accuracy is lower with pca preprocessing. So we’ll abandon this model.</p>
+<p>A bit surprisingly, the claimed accuracy is lower with pca preprocessing. Since we already had a high accuracy with the previous model, pca might have simplified the search space a bit too much. We’ll abandon this model.</p>
 <p>In order to try something completely different, we also apply a nearest neighbour model. Again we estimate the out of sample error rate using 10-fold cross validation ().</p>
 <pre class="r"><code>neighbourfit &lt;- train(classe ~. , method=&quot;knn&quot;, data=clean_training_data, trControl = myTrainControl)
 
@@ -169,16 +169,19 @@ neighbourfit</code></pre>
 ## The final value used for the model was k = 5.</code></pre>
 <p>The out of sample accuracy of this model is also estimated lower than that of the original random forest, although higher than the random forest model with principal components analysis.</p>
 </div>
-<div id="choosing-the-final-model" class="section level1">
-<h1>Choosing the final model</h1>
-<p>Amongst the above models and various others we tried, the “simple” random forest model with 50 trees has the highest predicted out of sample accuracy, about 99.5%. Therefore this is the model we select as our model of choice. Principal component analysis preprocessing actually reduced accuracy, and a nearest neighbour model could not reach the same accuracy either.</p>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<div id="choosing-the-final-model" class="section level2">
+<h2>Choosing the final model</h2>
+<p>Amongst the above models and various others we tried, the “simple” random forest model with 50 trees has the highest predicted out of sample accuracy, over 99%. Therefore this is the model we select as our model of choice. Principal component analysis preprocessing actually reduced accuracy, and a nearest neighbour model could not reach the same accuracy either.</p>
 </div>
-<div id="prediction-on-the-test-data" class="section level1">
-<h1>Prediction on the test data</h1>
+<div id="prediction-on-the-test-data" class="section level2">
+<h2>Prediction on the test data</h2>
 <p>The selected model predicts the following classes for the test data outcomes.</p>
 <pre class="r"><code>predict(baseforestfit,clean_testing_data)</code></pre>
 <pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
 ## Levels: A B C D E</code></pre>
+</div>
 </div>
 <div id="epilogue" class="section level1">
 <h1>Epilogue</h1>

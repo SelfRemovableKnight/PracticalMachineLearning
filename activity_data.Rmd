@@ -70,7 +70,7 @@ baseforestfit <- train(classe ~. , method="rf", ntree=50, data=clean_training_da
 
 baseforestfit
 ```
-The predicted out of sample accuracy of over 99% already looks quite promising, so this is a very decent candidate model.
+The predicted out of sample accuracy of over 99% already looks quite promising, so this is a very decent candidate model. Given that the estimated accuracy was used to select the mtry parameter (mtry with highest accuracy was chosen), bear in mind that the actual out of sample accuracy will be just slightly lower.
 
 However, let's see if we can get an even better - and maybe faster - answer if we first apply principal components analysis. Maybe not that relevant for a random forest model, but it could reduce the search space.
 ```{r pcaforest, cache=TRUE, warning=FALSE}
@@ -78,7 +78,7 @@ pcaforestfit <- train(classe ~. , method="rf", ntree=50, preProcess="pca", data=
 
 pcaforestfit
 ```
-A bit surprisingly, the claimed accuracy is lower with pca preprocessing. So we'll abandon this model. 
+A bit surprisingly, the claimed accuracy is lower with pca preprocessing. Since we already had a high accuracy with the previous model, pca might have simplified the search space a bit too much. We'll abandon this model. 
 
 In order to try something completely different, we also apply a nearest neighbour model. Again we estimate the out of sample error rate using 10-fold cross validation (). 
 ```{r neighbours, cache=TRUE, warning=FALSE}
@@ -88,10 +88,12 @@ neighbourfit
 ```
 The out of sample accuracy of this model is also estimated lower than that of the original random forest, although higher than the random forest model with principal components analysis. 
 
-# Choosing the final model
-Amongst the above models and various others we tried, the "simple" random forest model with 50 trees has the highest predicted out of sample accuracy, about 99.5%. Therefore this is the model we select as our model of choice. Principal component analysis preprocessing actually reduced accuracy, and a nearest neighbour model could not reach the same accuracy either.
+# Conclusion
 
-# Prediction on the test data
+## Choosing the final model
+Amongst the above models and various others we tried, the "simple" random forest model with 50 trees has the highest predicted out of sample accuracy, over 99%. Therefore this is the model we select as our model of choice. Principal component analysis preprocessing actually reduced accuracy, and a nearest neighbour model could not reach the same accuracy either.
+
+## Prediction on the test data
 The selected model predicts the following classes for the test data outcomes. 
 ```{r}
 predict(baseforestfit,clean_testing_data)
